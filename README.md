@@ -12,4 +12,4 @@ This project folder includes all experimentation code needed to train an optimal
 * **/notebooks** - The main text of the thesis (technical report).
 * **/results** - The main text of the thesis (technical report).
 * **/src**
-* ***__init__.py***
+  * ***__init__.py***
