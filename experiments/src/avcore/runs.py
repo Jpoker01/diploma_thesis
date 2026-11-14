@@ -87,3 +87,19 @@ def _read_stored_settings(study_path: Path) -> Mapping[str, str] | None:
             f"Study {study_path.stem} holds trials but no settings - move it away."
         )
     return stored_settings
+
+def _list_changes(stored: Mapping[str, str], current: Mapping[str, str]) -> list[str]:
+    """Return one "key: stored -> current" line per setting that differs.
+
+    Args:
+        stored: Settings the study was started with.
+        current: Settings of this run.
+
+    Returns:
+        The differences in key order; a key on one side only shows MISSING on the other.
+    """
+    return [
+        f"{key}: {stored.get(key, MISSING)} -> {current.get(key, MISSING)}"
+        for key in sorted(set(stored) | set(current))
+        if stored.get(key, MISSING) != current.get(key, MISSING)
+    ]
