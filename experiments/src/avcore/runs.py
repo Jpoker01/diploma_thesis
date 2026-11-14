@@ -125,3 +125,17 @@ def check_study_settings(study_path: Path, settings: Mapping[str, object]) -> No
             f"Study {study_path.stem} was started with other settings - "
             f"{'; '.join(changes)}. Move the study away or use another run name."
         )
+
+def store_study_settings(study: optuna.Study, settings: Mapping[str, object]) -> None:
+    """Keep the settings in a study that holds none yet.
+
+    Args:
+        study: Study returned by tuning.open_study.
+        settings: Everything that is fixed before the first trial.
+
+    Raises:
+        TypeError: If a setting is not plain (see _settings_as_text).
+    """
+    current_settings = _settings_as_text(settings)
+    if STUDY_SETTINGS_ATTR not in study.user_attrs:
+        study.set_user_attr(STUDY_SETTINGS_ATTR, current_settings)
