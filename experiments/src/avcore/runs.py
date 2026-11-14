@@ -2,6 +2,8 @@
 
 import json
 import shutil
+import sqlite3
+
 from collections.abc import Mapping
 from pathlib import Path
 
@@ -50,3 +52,38 @@ def _settings_as_text(settings: Mapping[str, object]) -> dict[str, str]:
             raise TypeError(
                 f"Setting {key} has a value whose text is not stable: {value!r}.")
     return {key: str(value) for key, value in settings.items()}
+
+
+def _read_stored_settings(study_path: Path) -> Mapping[str, str] | None:
+    """Return the settings stored in the study file; the file is only read.
+
+    Args:
+        study_path: SQLite file of the study; its stem is the study name.
+
+    Returns:
+        The stored settings, or None if there is nothing to compare yet - no file, an
+        empty file, no study in the file, or a study without trials and settings.
+
+    Raises:
+        RuntimeError: If the study holds trials but no settings.
+    """
+    if not study_path.is_file() or study_path.stat().st_size == 0:
+        return None
+    # read-only, so Optuna can not create or migrate tables in the file; as_uri gives
+    # the SQLite URI form also for a Windows path (forward slashes, /C:/...)
+    read_only_uri = f"{study_path.as_uri()}?mode=ro"
+    storage = optuna.storages.RDBStorage(
+        "sqlite://",
+        engine_kwargs={"creator": lambda: sqlite3.connect(read_only_uri, uri=True)},
+    )
+    try:
+        stored_study = optuna.load_study(study_name=study_path.stem, storage=storage)
+    except KeyError:
+        # the file exists, the study in it was not created yet
+        return None
+    stored_settings = stored_study.user_attrs.get(STUDY_SETTINGS_ATTR)
+    if stored_settings is None and stored_study.get_trials(deepcopy=False):
+        raise RuntimeError(
+            f"Study {study_path.stem} holds trials but no settings - move it away."
+        )
+    return stored_settings
