@@ -103,3 +103,25 @@ def _list_changes(stored: Mapping[str, str], current: Mapping[str, str]) -> list
         for key in sorted(set(stored) | set(current))
         if stored.get(key, MISSING) != current.get(key, MISSING)
     ]
+
+def check_study_settings(study_path: Path, settings: Mapping[str, object]) -> None:
+    """Stop when the study file was started with other settings; the file is only read.
+
+    Args:
+        study_path: SQLite file of the study; its stem is the study name.
+        settings: Everything that is fixed before the first trial.
+
+    Raises:
+        RuntimeError: If the stored settings differ, or the study holds trials but no settings.
+        TypeError: If a setting is not plain (see _settings_as_text).
+    """
+    current_settings = _settings_as_text(settings)
+    stored_settings = _read_stored_settings(study_path)
+    if stored_settings is None:
+        return
+    changes = _list_changes(stored_settings, current_settings)
+    if changes:
+        raise RuntimeError(
+            f"Study {study_path.stem} was started with other settings - "
+            f"{'; '.join(changes)}. Move the study away or use another run name."
+        )
